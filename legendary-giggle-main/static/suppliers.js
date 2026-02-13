@@ -168,6 +168,65 @@ function createCategoryRow(category) {
   return tr;
 }
 
+// 1. Вспомогательная функция для красивой цены (добавляет ₽)
+function createPriceCell(value) {
+  const td = document.createElement('td');
+  td.className = 'supplier-table__number';
+  const normalized = normalizeCellValue(value);
+  if (normalized) {
+    td.innerHTML = `<span class="price-cell">${normalized}<span class="price-currency">₽</span></span>`;
+  } else {
+    td.textContent = '—';
+  }
+  return td;
+}
+
+// 2. Умная функция для плашки остатка (с поддержкой + и -)
+function createStockCell(value) {
+  const td = document.createElement('td');
+  td.className = 'supplier-table__number';
+  
+  if (value === null || value === undefined || String(value).trim() === '') {
+    td.textContent = '—';
+    return td;
+  }
+
+  const rawString = String(value).trim();
+  let badgeClass = '';
+  let displayText = rawString;
+
+  // Если это тире или минус (любого вида) -> значит товара нет
+  if (/^[\-\u2010\u2012\u2013\u2014\u2212]+$/.test(rawString.replace(/\s/g, ''))) {
+    badgeClass = 'danger';
+    displayText = '-';
+  }
+  // Если это плюсы (+, ++, +++) -> значит товар есть
+  else if (/^\++$/.test(rawString.replace(/\s/g, ''))) {
+    badgeClass = 'success';
+    displayText = rawString;
+  }
+  // Если это число
+  else {
+    const numericVal = Number(rawString.replace(',', '.').replace(/\s/g, ''));
+    
+    if (!isNaN(numericVal)) {
+      if (numericVal > 0) badgeClass = 'success';
+      else if (numericVal <= 0) badgeClass = 'danger';
+      displayText = rawString + ' шт.';
+    } else {
+      // Если написан текст ("много", "мало", "под заказ")
+      displayText = rawString; 
+      const lower = rawString.toLowerCase();
+      if (lower.includes('есть') || rawString.includes('>')) badgeClass = 'success';
+      else if (lower.includes('нет') || lower.includes('мало') || rawString.includes('<')) badgeClass = 'danger';
+    }
+  }
+
+  td.innerHTML = `<span class="stock-badge ${badgeClass}">${displayText}</span>`;
+  return td;
+}
+
+// 3. Главная функция генерации строки
 function createItemRow(handler, row) {
   const name = normalizeCellValue(row.name);
   const hasValues = [row.wholesale_price, row.recommended_price, row.stock]
@@ -178,11 +237,19 @@ function createItemRow(handler, row) {
 
   const tr = document.createElement('tr');
   tr.className = 'supplier-table__item-row';
-  tr.appendChild(createTextCell(name, 'supplier-table__name'));
-  tr.appendChild(createTextCell(row.wholesale_price, 'supplier-table__number'));
-  tr.appendChild(createTextCell(row.recommended_price, 'supplier-table__number'));
-  tr.appendChild(createTextCell(row.stock, 'supplier-table__number'));
+  
+  // Делаем название жирным и красивым
+  const nameTd = createTextCell(name, 'supplier-table__name');
+  nameTd.style.fontWeight = '500';
+  nameTd.style.color = 'var(--heading)';
+  tr.appendChild(nameTd);
 
+  // Используем наши новые умные ячейки
+  tr.appendChild(createPriceCell(row.wholesale_price));
+  tr.appendChild(createPriceCell(row.recommended_price));
+  tr.appendChild(createStockCell(row.stock));
+
+  // Кнопка добавления "+"
   const actions = createTextCell('', 'supplier-table__actions');
   const addButton = document.createElement('button');
   addButton.type = 'button';
@@ -948,19 +1015,19 @@ function buildHandlerCard(handler) {
 
   const refreshButton = document.createElement('button');
   refreshButton.type = 'button';
-  refreshButton.className = 'btn btn-secondary';
+  refreshButton.className = 'button secondary';
   refreshButton.textContent = 'Обновить';
   actions.appendChild(refreshButton);
 
   const historyButton = document.createElement('button');
   historyButton.type = 'button';
-  historyButton.className = 'btn btn-secondary';
+  historyButton.className = 'button secondary';
   historyButton.textContent = 'История';
   actions.appendChild(historyButton);
 
   const editButton = document.createElement('button');
   editButton.type = 'button';
-  editButton.className = 'btn btn-secondary';
+  editButton.className = 'button secondary';
   editButton.textContent = 'Изменить';
   actions.appendChild(editButton);
 

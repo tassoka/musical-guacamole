@@ -9,39 +9,19 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
     <style>
-        :root {
-            --primary: #2563eb;
-            --primary-hover: #1d4ed8;
-            --bg-body: #f3f4f6;
-            --bg-sidebar: #1e293b;
-            --bg-white: #ffffff;
-            --text-main: #1f2937;
-            --text-light: #6b7280;
-            --border: #e5e7eb;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --success: #10b981;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Inter', sans-serif;
-        }
-
+        /* Оставляем ТОЛЬКО каркас лэйаута, все компоненты (таблицы, кнопки, карточки) берутся из style.css */
         body {
-            background-color: var(--bg-body);
-            color: var(--text-main);
             display: flex;
             height: 100vh;
             overflow: hidden;
+            margin: 0;
+            background-color: var(--bg);
         }
 
-        /* --- SIDEBAR (ЛЕВАЯ ПАНЕЛЬ) --- */
+        /* --- СИДБАР (ЛЕВАЯ ПАНЕЛЬ) --- */
         .sidebar {
             width: 260px;
-            background-color: var(--bg-sidebar);
+            background-color: #1e293b;
             color: white;
             display: flex;
             flex-direction: column;
@@ -49,41 +29,12 @@
             flex-shrink: 0;
         }
 
-        .logo {
-            font-size: 20px;
-            font-weight: 700;
-            margin-bottom: 40px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            color: #fff;
-        }
+        .logo { font-size: 20px; font-weight: 700; margin-bottom: 40px; display: flex; align-items: center; gap: 10px; color: #fff; }
+        .nav-item { padding: 12px 15px; color: #94a3b8; text-decoration: none; border-radius: 8px; margin-bottom: 5px; display: flex; align-items: center; gap: 12px; transition: 0.2s; font-weight: 500; }
+        .nav-item:hover, .nav-item.active { background-color: #334155; color: white; }
+        .nav-icon { width: 20px; text-align: center; }
 
-        .nav-item {
-            padding: 12px 15px;
-            color: #94a3b8;
-            text-decoration: none;
-            border-radius: 8px;
-            margin-bottom: 5px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            transition: 0.2s;
-            font-weight: 500;
-        }
-
-        .nav-item:hover,
-        .nav-item.active {
-            background-color: #334155;
-            color: white;
-        }
-
-        .nav-icon {
-            width: 20px;
-            text-align: center;
-        }
-
-        /* --- MAIN CONTENT (ПРАВАЯ ЧАСТЬ) --- */
+        /* --- ОСНОВНОЙ КОНТЕНТ --- */
         .main-content {
             flex: 1;
             display: flex;
@@ -91,10 +42,8 @@
             overflow: hidden;
             position: relative;
         }
-
-        /* HEADER */
         .header {
-            background: var(--bg-white);
+            background: var(--card);
             padding: 15px 30px;
             border-bottom: 1px solid var(--border);
             display: flex;
@@ -103,8 +52,6 @@
             height: 70px;
             flex-shrink: 0;
         }
-
-        /* ACTIONS BAR */
         .actions-bar {
             padding: 15px 30px;
             display: flex;
@@ -113,338 +60,36 @@
             flex-wrap: wrap;
             flex-shrink: 0;
         }
-
         .search-bar {
-            background: var(--bg-body);
-            padding: 8px 15px;
-            border-radius: 8px;
-            width: 350px;
             display: flex;
             align-items: center;
             gap: 10px;
-            border: 1px solid transparent;
+            width: 350px;
         }
-
         .search-bar input {
-            border: none;
-            background: transparent;
+            flex: 1;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            padding: 0.45rem 0.9rem;
+            font-size: 0.95rem;
             outline: none;
-            width: 100%;
-            font-size: 14px;
+            background: var(--bg);
+            transition: 0.2s;
         }
-
-        .search-bar:focus-within {
+        .search-bar input:focus {
             border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.2);
             background: white;
         }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 9px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 500;
-            font-size: 14px;
-            border: none;
-            transition: 0.2s;
-            text-decoration: none;
-        }
-
-        .btn-primary {
-            background-color: var(--primary);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background-color: var(--primary-hover);
-        }
-
-        .btn-secondary {
-            background-color: white;
-            border: 1px solid var(--border);
-            color: var(--text-main);
-        }
-
-        .btn-secondary:hover {
-            background-color: #f9fafb;
-            border-color: #d1d5db;
-        }
-
-        /* TABLE AREA */
         .table-container {
             padding: 0 30px 30px 30px;
             flex: 1;
             overflow-y: auto;
         }
-
-        /* MODAL STYLES */
-        dialog {
-            border: none;
-            border-radius: 12px;
-            padding: 0;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
-            width: 500px;
-            max-width: 90%;
-            margin: auto;
-        }
-
-        dialog::backdrop {
-            background: rgba(0, 0, 0, 0.4);
-        }
-
-        .dialog-header {
-            padding: 20px;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .dialog-body {
-            padding: 20px;
-        }
-
-        .grid-form {
-            display: grid;
-            gap: 15px;
-        }
-
-        .grid-form label {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-            font-size: 13px;
-            font-weight: 500;
-            color: var(--text-light);
-        }
-
-        .grid-form input {
-            padding: 8px 12px;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-        }
-
-        .dialog-actions {
-            padding: 20px;
-            border-top: 1px solid var(--border);
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            background: #f9fafb;
-        }
-
-        /* SUPPLIER SPECIFIC STYLES */
-        .tabs {
-            display: flex;
-            gap: 5px;
-            margin-bottom: 20px;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 0;
-        }
-
-        .tabs__button {
-            padding: 10px 20px;
-            text-decoration: none;
-            color: var(--text-light);
-            font-weight: 500;
-            border-bottom: 2px solid transparent;
-            transition: 0.2s;
-            font-size: 14px;
-        }
-
-        .tabs__button:hover {
-            color: var(--text-main);
-        }
-
-        .tabs__button.is-active {
-            color: var(--primary);
-            border-bottom-color: var(--primary);
-        }
-
-        .supplier-layout {
-            display: flex;
-            gap: 20px;
-            align-items: flex-start;
-        }
-
-        .supplier-card {
-            background: white;
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 20px;
-            flex: 1;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-        }
-
-        .supplier-changes {
-            width: 300px;
-            flex-shrink: 0;
-            background: white;
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-        }
-
-        .supplier-card__header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 20px;
-        }
-
-        .supplier-card__meta h2 {
-            font-size: 18px;
-            font-weight: 700;
-            margin-bottom: 5px;
-        }
-
-        .supplier-card__actions {
-            display: flex;
-            gap: 10px;
-        }
-
-        .supplier-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .supplier-table th {
-            text-align: left;
-            padding: 10px;
-            border-bottom: 1px solid var(--border);
-            color: var(--text-light);
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-
-        .supplier-table td {
-            padding: 10px;
-            border-bottom: 1px solid var(--border);
-            font-size: 14px;
-            vertical-align: middle;
-        }
-
-        .supplier-table__add-button {
-            width: 24px;
-            height: 24px;
-            border-radius: 4px;
-            border: 1px solid var(--border);
-            background: white;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--primary);
-        }
-
-        .supplier-table__add-button:hover {
-            background-color: var(--bg-body);
-        }
-
-        .sheet-tabs__list {
-            display: flex;
-            gap: 5px;
-            margin-bottom: 15px;
-        }
-
-        .sheet-tabs__button {
-            padding: 6px 12px;
-            border: 1px solid var(--border);
-            background: white;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 13px;
-            color: var(--text-main);
-        }
-
-        .sheet-tabs__button.is-active {
-            background: var(--primary);
-            color: white;
-            border-color: var(--primary);
-        }
-
-        .supplier-changes__list {
-            list-style: none;
-            padding: 0;
-        }
-
-        .supplier-card__change-item {
-            padding: 10px 0;
-            border-bottom: 1px solid var(--border);
-            font-size: 13px;
-        }
-
-        .supplier-card__change-date {
-            display: block;
-            color: var(--text-light);
-            font-size: 11px;
-            margin-bottom: 2px;
-        }
-
-        .muted {
-            color: var(--text-light);
-        }
-
-        /* Dialog specific adaptations */
-        .mapping-grid {
-            display: grid;
-            gap: 15px;
-            margin-top: 15px;
-        }
-
-        .mapping-grid--currency {
-            grid-template-columns: 1fr 1fr;
-        }
-
-        .sheet-list {
-            margin-top: 15px;
-            max-height: 300px;
-            overflow-y: auto;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 10px;
-        }
-
-        .sheet-card {
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            margin-bottom: 10px;
-            padding: 10px;
-        }
-
-        .sheet-card__header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        .sheet-card__body {
-            margin-top: 10px;
-            padding-top: 10px;
-            border-top: 1px solid var(--border);
-        }
-
-        .sheet-card--disabled {
-            opacity: 0.6;
-        }
-
-        .supplier-add-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
     </style>
 </head>
 
 <body>
-
     <aside class="sidebar">
         <div class="logo">
             <span>📦</span> Мой Склад
@@ -472,7 +117,7 @@
                 <span>🔍</span>
                 <input type="search" id="supplier-search" placeholder="Поиск по наименованию...">
             </div>
-            <button class="btn btn-primary" id="add-handler-button">
+            <button class="button primary" id="add-handler-button">
                 <span>+</span> Добавить прайс-лист
             </button>
         </header>
@@ -485,16 +130,15 @@
                 </label>
             </div>
             <div style="flex: 1"></div>
-            <button type="button" class="btn btn-secondary" id="refresh-all-button">Обновить все прайсы</button>
+            <button type="button" class="button secondary" id="refresh-all-button">Обновить все прайсы</button>
         </div>
 
         <div class="table-container">
             <div class="tabs" id="supplier-tabs" hidden></div>
 
-            <section class="card" id="supplier-empty" hidden
-                style="text-align: center; padding: 60px; color: var(--text-light);">
+            <section class="card" id="supplier-empty" hidden style="text-align: center; padding: 60px; color: var(--muted);">
                 <div style="font-size: 40px; margin-bottom: 20px;">🚚</div>
-                <h2 style="color: var(--text-main); margin-bottom: 10px;">Пока нет прайс-листов</h2>
+                <h2 style="color: var(--heading); margin-bottom: 10px;">Пока нет прайс-листов</h2>
                 <p>Добавьте прайс-лист поставщика, чтобы увидеть таблицу с ценами и остатками.</p>
             </section>
 
@@ -506,13 +150,13 @@
         <div class="dialog-header">
             <h3>Добавить прайс-лист</h3>
             <button type="button" onclick="document.getElementById('handler-dialog').close()"
-                style="border:none; background:none; font-size:20px; cursor:pointer;">&times;</button>
+                style="border:none; background:none; font-size:20px; cursor:pointer; color: var(--muted);">&times;</button>
         </div>
         <form method="dialog" id="handler-form">
             <div class="dialog-body">
                 <div class="grid-form">
                     <label>
-                        <span>Название <span style="color:red">*</span></span>
+                        <span>Название <span style="color:var(--danger)">*</span></span>
                         <input type="text" name="title" required placeholder="Например, Поставщик А">
                     </label>
                     <label>
@@ -524,33 +168,28 @@
                         <input type="file" name="source_file" accept=".xls,.xlsx,.xlsm,.xlsb,.ods">
                     </label>
                     <div>
-                        <button type="button" class="btn btn-secondary" id="preview-source-button"
-                            style="width: 100%;">Загрузить таблицу</button>
+                        <button type="button" class="button secondary" id="preview-source-button" style="width: 100%;">Загрузить таблицу</button>
                     </div>
 
                     <div class="mapping-section" id="mapping-section" hidden>
-                        <p class="mapping-section__hint"
-                            style="font-size: 13px; color: var(--text-light); margin-bottom: 10px;">Отметьте листы для
-                            обработки и сопоставьте колонки с данными.</p>
+                        <p class="mapping-section__hint">Отметьте листы для обработки и сопоставьте колонки с данными.</p>
                         <div id="sheet-list" class="sheet-list"></div>
                         <div class="mapping-grid mapping-grid--currency">
                             <label>
                                 <span>Курс для опта</span>
-                                <input type="number" name="wholesale_multiplier" min="0.01" step="0.01" value="1"
-                                    required>
+                                <input type="number" name="wholesale_multiplier" min="0.01" step="0.01" value="1" required>
                             </label>
                             <label>
                                 <span>Курс для РРЦ</span>
-                                <input type="number" name="recommended_multiplier" min="0.01" step="0.01" value="1"
-                                    required>
+                                <input type="number" name="recommended_multiplier" min="0.01" step="0.01" value="1" required>
                             </label>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="dialog-actions">
-                <button type="button" class="btn btn-secondary" value="cancel">Отмена</button>
-                <button type="submit" class="btn btn-primary" id="save-handler-button" disabled>Сохранить</button>
+                <button type="button" class="button secondary" value="cancel">Отмена</button>
+                <button type="submit" class="button primary" id="save-handler-button" disabled>Сохранить</button>
             </div>
         </form>
     </dialog>
@@ -559,7 +198,7 @@
         <div class="dialog-header">
             <h3 id="supplier-add-heading">Добавить на склад</h3>
             <button type="button" onclick="document.getElementById('supplier-add-dialog').close()"
-                style="border:none; background:none; font-size:20px; cursor:pointer;">&times;</button>
+                style="border:none; background:none; font-size:20px; cursor:pointer; color: var(--muted);">&times;</button>
         </div>
         <form method="dialog" id="supplier-add-form">
             <div class="dialog-body">
@@ -569,11 +208,11 @@
                 <div class="grid-form">
                     <div class="supplier-add-grid">
                         <label>
-                            <span>Количество <span style="color:red">*</span></span>
+                            <span>Количество <span style="color:var(--danger)">*</span></span>
                             <input type="number" name="quantity" min="1" step="1" required>
                         </label>
                         <label>
-                            <span>Опт <span style="color:red">*</span></span>
+                            <span>Опт <span style="color:var(--danger)">*</span></span>
                             <input type="number" name="wholesale_price" min="0" step="0.01" required>
                         </label>
                     </div>
@@ -584,8 +223,8 @@
                 </div>
             </div>
             <div class="dialog-actions">
-                <button type="button" class="btn btn-secondary" value="cancel">Отмена</button>
-                <button type="submit" class="btn btn-primary" id="supplier-add-submit">Добавить</button>
+                <button type="button" class="button secondary" value="cancel">Отмена</button>
+                <button type="submit" class="button primary" id="supplier-add-submit">Добавить</button>
             </div>
         </form>
     </dialog>
@@ -594,9 +233,9 @@
         <div class="dialog-header">
             <h3 id="changes-dialog-title">История изменений</h3>
             <button type="button" onclick="document.getElementById('changes-dialog').close()"
-                style="border:none; background:none; font-size:20px; cursor:pointer;">&times;</button>
+                style="border:none; background:none; font-size:20px; cursor:pointer; color: var(--muted);">&times;</button>
         </div>
-        <div class="dialog-body" style="max-height: 60vh; overflow-y: auto;">
+        <div class="dialog-body">
             <ul class="supplier-changes__list" id="changes-dialog-list"></ul>
             <p id="changes-dialog-empty" class="muted" hidden>Изменения не обнаружены.</p>
         </div>
@@ -606,5 +245,4 @@
 
     <script src="{{ url_for('static', filename='suppliers.js') }}" defer></script>
 </body>
-
 </html>

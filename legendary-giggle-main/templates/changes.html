@@ -5,36 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>История изменений</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
     <style>
-        :root {
-            --primary: #2563eb;
-            --primary-hover: #1d4ed8;
-            --bg-body: #f3f4f6;
-            --bg-sidebar: #1e293b;
-            --bg-white: #ffffff;
-            --text-main: #1f2937;
-            --text-light: #6b7280;
-            --border: #e5e7eb;
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
-        body { background-color: var(--bg-body); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
-        .sidebar { width: 260px; background-color: var(--bg-sidebar); color: white; display: flex; flex-direction: column; padding: 20px; flex-shrink: 0; }
+        body { display: flex; height: 100vh; overflow: hidden; margin: 0; background-color: var(--bg); }
+        .sidebar { width: 260px; background-color: #1e293b; color: white; display: flex; flex-direction: column; padding: 20px; flex-shrink: 0; }
         .logo { font-size: 20px; font-weight: 700; margin-bottom: 40px; display: flex; align-items: center; gap: 10px; color: #fff; }
         .nav-item { padding: 12px 15px; color: #94a3b8; text-decoration: none; border-radius: 8px; margin-bottom: 5px; display: flex; align-items: center; gap: 12px; transition: 0.2s; font-weight: 500; }
         .nav-item:hover, .nav-item.active { background-color: #334155; color: white; }
         .nav-icon { width: 20px; text-align: center; }
         .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
-        .header { background: var(--bg-white); padding: 15px 30px; border-bottom: 1px solid var(--border); display: flex; align-items: center; height: 70px; flex-shrink: 0; }
-        .header h1 { font-size: 20px; font-weight: 600; }
+        .header { background: var(--card); padding: 15px 30px; border-bottom: 1px solid var(--border); display: flex; align-items: center; height: 70px; flex-shrink: 0; }
+        .header h1 { font-size: 20px; font-weight: 600; margin: 0; color: var(--heading); }
         .content-scroll { padding: 30px; flex: 1; overflow-y: auto; }
-        .card { background: white; border: 1px solid var(--border); border-radius: 10px; padding: 20px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05); }
-        
-        .supplier-changes__list { list-style: none; padding: 0; }
-        .supplier-card__change-item { padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
-        .supplier-card__change-item:last-child { border-bottom: none; }
-        .supplier-card__change-date { display: block; color: var(--text-light); font-size: 12px; margin-bottom: 4px; }
-        .supplier-card__change-text { line-height: 1.5; }
-        .muted { color: var(--text-light); }
+        .raw-change-data { display: none; }
     </style>
 </head>
 <body>
@@ -48,32 +32,175 @@
             <a href="#" class="nav-item"><span class="nav-icon">⚙️</span> Настройки</a>
         </nav>
     </aside>
+    
     <main class="main-content">
         <header class="header">
             <h1>История изменений прайс-листов</h1>
         </header>
+        
         <div class="content-scroll">
-            <section class="card">
-                {% if changes %}
-                <ul class="supplier-changes__list">
-                    {% for change in changes %}
-                    <li class="supplier-card__change-item">
-                        <span class="supplier-card__change-date">{{ change.changed_at }} • {{ change.handler_title }}</span>
-                        <span class="supplier-card__change-text">
-                            {% if change.sheet_name %}[{{ change.sheet_name }}] {% endif %}
-                            {{ change.field }} 
-                            {% if change.item_name %}«{{ change.item_name }}»{% endif %}
-                            {% if change.category %}({{ change.category }}){% endif %}:
-                            {{ change.old_value or '—' }} → {{ change.new_value or '—' }}
-                        </span>
-                    </li>
-                    {% endfor %}
-                </ul>
-                {% else %}
-                <p class="muted">Изменения не обнаружены.</p>
-                {% endif %}
-            </section>
+            <ul id="beautiful-changes-list" style="list-style: none; padding: 0; max-width: 900px; margin: 0 auto;"></ul>
+
+            {% if not changes %}
+            <p class="muted" style="text-align: center; margin-top: 50px;">Изменения не обнаружены.</p>
+            {% endif %}
+
+            <div id="raw-data-container" class="raw-change-data">
+                {% for change in changes %}
+                <div class="raw-item" 
+                    data-field="{{ change.field }}"
+                    data-old="{{ change.old_value or '' }}"
+                    data-new="{{ change.new_value or '' }}"
+                    data-date="{{ change.changed_at }}"
+                    data-handler="{{ change.handler_title or '' }}"
+                    data-item="{{ change.item_name or '' }}"
+                    data-cat="{{ change.category or '' }}">
+                </div>
+                {% endfor %}
+            </div>
         </div>
     </main>
+
+    <script>
+        const fieldLabels = {
+            'stock': 'Остаток',
+            'wholesale_price': 'Опт',
+            'recommended_price': 'РРЦ',
+            'name': 'Наименование',
+            'category': 'Категория'
+        };
+
+        const listContainer = document.getElementById('beautiful-changes-list');
+        const rawItems = document.querySelectorAll('.raw-item');
+
+        function cleanValue(val) {
+            if (val === 'None' || val === 'null' || val === null || val.trim() === '') return '—';
+            return val.trim();
+        }
+
+        // Функция форматирования цен (добавляет ₽)
+        function formatPrice(val) {
+            if (val === '—') return val;
+            return `<span class="price-cell">${val}<span class="price-currency">₽</span></span>`;
+        }
+
+        // Умная функция форматирования остатка (как в таблице)
+        function formatStock(val) {
+            if (val === '—') return val;
+            let badgeClass = '';
+            let displayText = val;
+
+            if (/^[\-\u2010\u2012\u2013\u2014\u2212]+$/.test(val.replace(/\s/g, ''))) {
+                badgeClass = 'danger';
+                displayText = '-';
+            } else if (/^\++$/.test(val.replace(/\s/g, ''))) {
+                badgeClass = 'success';
+                displayText = val;
+            } else {
+                const numericVal = Number(val.replace(',', '.').replace(/\s/g, ''));
+                if (!isNaN(numericVal)) {
+                    if (numericVal > 0) badgeClass = 'success';
+                    else if (numericVal <= 0) badgeClass = 'danger';
+                    displayText = val + ' шт.';
+                } else {
+                    displayText = val; 
+                    const lower = val.toLowerCase();
+                    if (lower.includes('есть') || val.includes('>')) badgeClass = 'success';
+                    else if (lower.includes('нет') || lower.includes('мало') || val.includes('<')) badgeClass = 'danger';
+                }
+            }
+
+            if (badgeClass) {
+                return `<span class="stock-badge ${badgeClass}">${displayText}</span>`;
+            }
+            return `<span class="stock-badge">${displayText}</span>`; // серая плашка для непонятного текста
+        }
+
+        rawItems.forEach(item => {
+            const fieldRaw = item.getAttribute('data-field');
+            const fieldName = fieldLabels[fieldRaw] || fieldRaw;
+            
+            const rawOld = cleanValue(item.getAttribute('data-old'));
+            const rawNew = cleanValue(item.getAttribute('data-new'));
+            
+            let oldHtml = rawOld;
+            let newHtml = rawNew;
+            let iconHtml = '';
+            let isZeroStock = false;
+
+            // Применяем форматирование в зависимости от типа поля
+            if (fieldRaw === 'stock') {
+                oldHtml = formatStock(rawOld);
+                newHtml = formatStock(rawNew);
+                
+                // Проверяем, обнулился ли остаток (минус или 0)
+                const isNowMinus = /^[\-\u2010\u2012\u2013\u2014\u2212]+$/.test(rawNew.replace(/\s/g, ''));
+                const parseVal = (v) => parseFloat(String(v).replace(/\s/g, '').replace(',', '.'));
+                const newVal = parseVal(rawNew);
+                
+                if (isNowMinus || newVal === 0) {
+                    isZeroStock = true;
+                }
+            } else if (fieldRaw === 'wholesale_price' || fieldRaw === 'recommended_price') {
+                oldHtml = formatPrice(rawOld);
+                newHtml = formatPrice(rawNew);
+                
+                // Добавляем стрелочки тренда для цен
+                const parseVal = (v) => parseFloat(String(v).replace(/\s/g, '').replace(',', '.'));
+                const oldVal = parseVal(rawOld);
+                const newVal = parseVal(rawNew);
+                const isNumeric = !isNaN(oldVal) && !isNaN(newVal);
+
+                if (isNumeric && newVal > oldVal) {
+                    iconHtml = '<span class="change-icon danger">⬆</span>';
+                } else if (isNumeric && newVal < oldVal) {
+                    iconHtml = '<span class="change-icon success">⬇</span>';
+                }
+            }
+
+            const itemName = item.getAttribute('data-item');
+            const cat = item.getAttribute('data-cat');
+            const handler = item.getAttribute('data-handler');
+            const dateRaw = item.getAttribute('data-date');
+            
+            let titleText = itemName ? itemName : 'Без названия';
+            if (cat && cat !== 'None') {
+                titleText += ` <span style="color:var(--muted); font-size:0.9rem; font-weight:400;">(${cat})</span>`;
+            }
+
+            const li = document.createElement('li');
+            li.className = 'change-item';
+            
+            if (isZeroStock) {
+                li.classList.add('change-item--zero-stock');
+            }
+
+            const badgeHtml = isZeroStock ? '<span class="change-badge danger">Обнулился!</span>' : '';
+            
+            li.innerHTML = `
+                <div class="change-item__header">
+                    <div>
+                        <span class="change-item__field">${fieldName}</span>
+                        <span style="color:var(--muted); font-size:0.85rem; margin-left: 10px;">Прайс: ${handler}</span>
+                    </div>
+                    <div style="display:flex; gap: 10px; align-items: center;">
+                        ${badgeHtml}
+                        <span class="change-item__date">${dateRaw}</span>
+                    </div>
+                </div>
+                <div class="change-item__body">
+                    <div class="change-item__title">${titleText}</div>
+                    <div class="change-item__values" style="margin-top: 8px;">
+                        <span class="change-val--old" style="opacity: 0.7;">${oldHtml}</span>
+                        <span class="change-arrow">→</span>
+                        <span class="change-val--new">${newHtml}</span>
+                        ${iconHtml}
+                    </div>
+                </div>
+            `;
+
+            listContainer.appendChild(li);
+        });
+    </script>
 </body>
 </html>
