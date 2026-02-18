@@ -427,6 +427,51 @@ def _parse_sheet_configs(raw_value: Any, *, require_selection: bool = True) -> L
 
     return configs
 
+def _attach_trends_to_rows(connection, handler_id: int, rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    cursor = connection.cursor()
+    # Получаем историю изменений цен за последние 7 дней (старые мы будем удалять)
+    cursor.execute(
+        """
+        SELECT sheet_name, category, item_name, field, old_value, new_value
+        FROM supplier_item_changes
+        WHERE handler_id = ? AND field IN ('wholesale_price', 'recommended_price')
+        ORDER BY id ASC
+        """,
+        (handler_id,)
+    )
+    trends = {}
+    for row in cursor.fetchall():
+        sheet = _normalize_text(row["sheet_name"]).lower()
+        cat = _normalize_text(row["category"]).lower()
+        name = _normalize_text(row["item_name"]).lower()
+        field = row["field"]
+        try:
+            old_v = float(str(row["old_value"]).replace(" ", "").replace(",", "."))
+            new_v = float(str(row["new_value"]).replace(" ", "").replace(",", "."))
+            trend = 'up' if new_v > old_v else 'down' if new_v < old_v else None
+            if trend:
+                key = (sheet, cat, name)
+                if key not in trends:
+                    trends[key] = {}
+                trends[key][field] = trend
+        except (ValueError, TypeError):
+            pass
+    
+    # Прикрепляем найденные тренды к строкам
+    for r in rows:
+        if r.get("kind") != "item":
+            continue
+        sheet = _normalize_text(r.get("sheet")).lower()
+        cat = _normalize_text(r.get("category")).lower()
+        name = _normalize_text(r.get("name")).lower()
+        key = (sheet, cat, name)
+        
+        if key in trends:
+            if 'wholesale_price' in trends[key]:
+                r['wholesale_trend'] = trends[key]['wholesale_price']
+            if 'recommended_price' in trends[key]:
+                r['recommended_trend'] = trends[key]['recommended_price']
+    return rows
 
 def _get_cached_supplier_rows(connection, handler_id: int) -> List[Dict[str, Any]]:
     cursor = connection.cursor()
@@ -460,7 +505,8 @@ def _get_cached_supplier_rows(connection, handler_id: int) -> List[Dict[str, Any
         }
         for row in cursor.fetchall()
     ]
-    return rows
+    # Добавляем тренды перед возвратом
+    return _attach_trends_to_rows(connection, handler_id, rows)
 
 
 def _get_recent_supplier_changes(
@@ -562,7 +608,7 @@ def _refresh_handler_rows(handler) -> List[Dict[str, Any]]:
     if not mapping:
         raise ValueError("Не выбраны листы или колонки для прайс-листа.")
 
-    rows = _extract_mapped_rows(workbook, mapping, limit=500)
+    rows = _extract_mapped_rows(workbook, mapping, limit=1000000)
 
     connection = get_db_connection()
     cursor = connection.cursor()
@@ -698,21 +744,20 @@ def _refresh_handler_rows(handler) -> List[Dict[str, Any]]:
             """,
             change_entries,
         )
+# === ВОТ ЭТОТ БЛОК НУЖНО ЗАМЕНИТЬ ===
     cursor.execute(
         """
         DELETE FROM supplier_item_changes
         WHERE handler_id = ?
-          AND id NOT IN (
-              SELECT id
-              FROM supplier_item_changes
-              WHERE handler_id = ?
-              ORDER BY datetime(changed_at) DESC, id DESC
-              LIMIT 200
-          )
+          AND changed_at < datetime('now', '-7 days')
         """,
-        (handler["id"], handler["id"]),
+        (handler["id"],),
     )
     connection.commit()
+    
+    # Прикрепляем тренды к обновленным строкам
+    rows_with_positions = _attach_trends_to_rows(connection, handler["id"], rows_with_positions)
+    
     connection.close()
 
     return rows_with_positions
@@ -1007,7 +1052,8 @@ def log_history(item_id: int, change: int, action: str, connection: Optional[sql
 def index():
     connection = get_db_connection()
     cursor = connection.cursor()
-    cursor.execute("SELECT * FROM items ORDER BY name")
+    # Сортируем сначала по категории, а затем по наименованию
+    cursor.execute("SELECT * FROM items ORDER BY category, name")
     items = [serialize_item(row) for row in cursor.fetchall()]
     connection.close()
     return render_template("index.html", items=items)
@@ -1294,18 +1340,7 @@ def supplier_handlers():
             handler["sheets"] = _get_handler_sheets(connection, handler["id"])
             rows: Optional[List[Dict[str, Any]]] = None
             if _handler_has_mapping(handler):
-                should_refresh = False
-                refreshed_at_raw = handler.get("last_refreshed_at")
-                if not refreshed_at_raw:
-                    should_refresh = True
-                else:
-                    try:
-                        refreshed_at = datetime.fromisoformat(refreshed_at_raw)
-                        if refreshed_at <= now - timedelta(minutes=SUPPLIER_AUTO_REFRESH_MINUTES):
-                            should_refresh = True
-                    except ValueError:
-                        should_refresh = True
-                if should_refresh:
+                if not handler.get("last_refreshed_at"):
                     try:
                         rows = _refresh_handler_rows(handler)
                         handler = _get_supplier_handler(handler["id"]) or handler
@@ -1727,20 +1762,7 @@ def supplier_handler_detail(handler_id: int):
 
     rows: Optional[List[Dict[str, Any]]] = None
     if _handler_has_mapping(handler):
-        should_refresh = False
-        refreshed_at_raw = handler.get("last_refreshed_at")
-        if not refreshed_at_raw:
-            should_refresh = True
-        else:
-            try:
-                refreshed_at = datetime.fromisoformat(refreshed_at_raw)
-                if refreshed_at <= datetime.utcnow() - timedelta(
-                    minutes=SUPPLIER_AUTO_REFRESH_MINUTES
-                ):
-                    should_refresh = True
-            except ValueError:
-                should_refresh = True
-        if should_refresh:
+        if not handler.get("last_refreshed_at"):
             try:
                 rows = _refresh_handler_rows(handler)
                 handler = _get_supplier_handler(handler_id) or handler
